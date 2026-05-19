@@ -1,18 +1,23 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import { analyzeStudyProject } from "@/lib/study-projects";
+import type { AiProvider } from "@/lib/ai/types";
 
-const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
-  globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-  ]),
-]);
+export const runtime = "nodejs";
+export const maxDuration = 300;
 
-export default eslintConfig;
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const body = await req.json().catch(() => ({}));
+  const provider = (body.provider ?? "anthropic") as AiProvider;
+  try {
+    const analysis = await analyzeStudyProject(id, provider);
+    return Response.json({ analysis });
+  } catch (err) {
+    return Response.json(
+      { error: err instanceof Error ? err.message : String(err) },
+      { status: 400 },
+    );
+  }
+}

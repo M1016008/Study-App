@@ -1,5 +1,18 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+import { getProjectAnalysis } from "@/lib/study-projects";
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+export const runtime = "nodejs";
+
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  const analysis = await getProjectAnalysis(id);
+  if (!analysis) {
+    return Response.json(
+      { error: "解析結果がまだありません。" },
+      { status: 404 },
+    );
+  }
+  return Response.json({ analysis });
+}
