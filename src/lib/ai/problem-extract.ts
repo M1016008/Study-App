@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import { generateGeminiText } from "./gemini";
 import type { AiProvider } from "./types";
 
 export interface ExtractedProblem {
@@ -93,6 +94,11 @@ export async function extractProblems(
       ],
     });
     const raw = res.choices[0]?.message?.content ?? "";
+    return validate(JSON.parse(extractJson(raw)));
+  }
+
+  if (provider === "gemini") {
+    const raw = await generateGeminiText(SYSTEM_PROMPT, userPrompt);
     return validate(JSON.parse(extractJson(raw)));
   }
 

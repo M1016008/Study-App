@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { streamExplainAnthropic } from "@/lib/ai/anthropic";
+import { streamExplainGemini } from "@/lib/ai/gemini";
 import { streamExplainOpenAI } from "@/lib/ai/openai";
 import type { AiProvider } from "@/lib/ai/types";
 import { extractPdfText } from "@/lib/pdf";
@@ -42,7 +43,9 @@ export async function POST(req: NextRequest) {
   const generator =
     provider === "openai"
       ? streamExplainOpenAI(text)
-      : streamExplainAnthropic(text);
+      : provider === "gemini"
+        ? streamExplainGemini(text)
+        : streamExplainAnthropic(text);
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({

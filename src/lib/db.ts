@@ -105,13 +105,123 @@ const SCHEMA = [
     FOREIGN KEY (problem_set_id) REFERENCES problem_sets(id) ON DELETE CASCADE
   )`,
   `CREATE INDEX IF NOT EXISTS idx_problems_set ON problems(problem_set_id, problem_index)`,
+
+  `CREATE TABLE IF NOT EXISTS study_groups (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    purpose TEXT,
+    target_completion_date TEXT,
+    memo TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_study_groups_sort ON study_groups(sort_order ASC, updated_at DESC)`,
+
+  `CREATE TABLE IF NOT EXISTS study_projects (
+    id TEXT PRIMARY KEY,
+    study_group_id TEXT,
+    title TEXT NOT NULL,
+    purpose TEXT,
+    memo TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    target_completion_date TEXT,
+    status TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (study_group_id) REFERENCES study_groups(id) ON DELETE SET NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_study_projects_updated ON study_projects(updated_at DESC)`,
+
+  `CREATE TABLE IF NOT EXISTS project_materials (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    original_file_name TEXT NOT NULL,
+    file_type TEXT NOT NULL,
+    media_category TEXT NOT NULL,
+    file_size_bytes INTEGER NOT NULL,
+    text_content TEXT NOT NULL,
+    page_count INTEGER,
+    duration_seconds INTEGER,
+    upload_status TEXT NOT NULL,
+    analysis_status TEXT NOT NULL,
+    uploaded_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES study_projects(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_project_materials_project ON project_materials(project_id, uploaded_at DESC)`,
+
+  `CREATE TABLE IF NOT EXISTS project_analysis (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL UNIQUE,
+    total_materials INTEGER NOT NULL,
+    total_file_size_bytes INTEGER NOT NULL,
+    total_pages INTEGER NOT NULL,
+    total_audio_seconds INTEGER NOT NULL,
+    estimated_total_study_minutes INTEGER NOT NULL,
+    combined_structure_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES study_projects(id) ON DELETE CASCADE
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS study_plans (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    target_completion_date TEXT,
+    study_style TEXT NOT NULL,
+    total_rounds INTEGER NOT NULL,
+    weekday_minutes_json TEXT NOT NULL,
+    include_quiz INTEGER NOT NULL,
+    include_review_days INTEGER NOT NULL,
+    include_audio_learning INTEGER NOT NULL,
+    plan_json TEXT NOT NULL,
+    status TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES study_projects(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_study_plans_project ON study_plans(project_id, created_at DESC)`,
+
+  `CREATE TABLE IF NOT EXISTS study_note_exports (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    topic_key TEXT,
+    topic_title TEXT NOT NULL,
+    content_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (project_id) REFERENCES study_projects(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_study_note_exports_project ON study_note_exports(project_id, created_at DESC)`,
+];
+
+const MIGRATIONS = [
+  `ALTER TABLE study_projects ADD COLUMN study_group_id TEXT`,
+  `ALTER TABLE study_projects ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0`,
+  `CREATE INDEX IF NOT EXISTS idx_study_projects_group ON study_projects(study_group_id, sort_order ASC)`,
 ];
 
 export async function initDb(): Promise<Client> {
   const db = getDb();
-  if (initialized) return db;
-  for (const stmt of SCHEMA) {
-    await db.execute(stmt);
+  if (!initialized) {
+    for (const stmt of SCHEMA) {
+      await db.execute(stmt);
+    }
+  }
+  for (const stmt of MIGRATIONS) {
+    try {
+      await db.execute(stmt);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const lower = msg.toLowerCase();
+      if (!lower.includes("duplicate column") && !lower.includes("already exists")) {
+        throw err;
+      }
+    }
   }
   initialized = true;
   return db;

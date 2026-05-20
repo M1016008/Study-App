@@ -19,7 +19,13 @@ export function StructureTree({
   pathPrefix = "",
 }: Props) {
   return (
-    <ul className={depth === 0 ? "space-y-1" : "ml-4 mt-1 space-y-1"}>
+    <ul
+      className={
+        depth === 0
+          ? "space-y-2"
+          : "ml-5 mt-2 space-y-2 border-l border-slate-200 pl-3"
+      }
+    >
       {nodes.map((node, i) => {
         const key = `${pathPrefix}/${i}`;
         return (
@@ -55,36 +61,34 @@ function TreeNode({
   const isSelected = selectedKey === nodeKey;
 
   return (
-    <li>
+    <li className="relative">
       <div
-        className={`flex items-start gap-1 group rounded-md px-1.5 py-1 ${
+        className={`group flex items-start gap-2 rounded-xl border px-3 py-2 transition ${
           isSelected
-            ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-            : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            ? "border-teal-300 bg-teal-50 text-slate-950 shadow-sm"
+            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
         }`}
       >
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className={`mt-0.5 w-4 text-xs ${
+          className={`mt-0.5 grid h-5 w-5 place-items-center rounded-full text-xs ${
             hasChildren ? "" : "invisible"
-          } ${isSelected ? "" : "text-zinc-400"}`}
+          } ${isSelected ? "bg-white text-teal-700" : "bg-slate-100 text-slate-400"}`}
           aria-label={open ? "閉じる" : "開く"}
         >
-          {open ? "▾" : "▸"}
+          {open ? "−" : "+"}
         </button>
         <button
           type="button"
           onClick={() => onSelect(node, nodeKey)}
           className="flex-1 text-left text-sm leading-snug"
         >
-          <span className="font-medium">{node.title}</span>
+          <span className="font-semibold">{node.title}</span>
           {node.summary && (
             <span
-              className={`block text-xs mt-0.5 ${
-                isSelected
-                  ? "text-zinc-200 dark:text-zinc-600"
-                  : "text-zinc-500"
+              className={`mt-1 block text-xs leading-5 ${
+                isSelected ? "text-teal-800" : "text-slate-500"
               }`}
             >
               {node.summary}

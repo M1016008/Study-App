@@ -1,4 +1,4 @@
-export type AiProvider = "anthropic" | "openai";
+export type AiProvider = "anthropic" | "openai" | "gemini";
 
 export const EXPLAIN_SYSTEM_PROMPT = `あなたは資格試験対策・受験対策の名講師です。受講生は中学生〜社会人まで幅広く、専門知識ゼロの方もいます。
 ユーザーから渡された教材テキストを、以下の方針で日本語で解説してください。

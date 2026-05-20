@@ -254,7 +254,7 @@ function UploadView({
       <div>
         <label className="block text-xs text-zinc-500 mb-1">AI プロバイダー</label>
         <div className="flex gap-2">
-          {(["anthropic", "openai"] as const).map((p) => (
+          {(["anthropic", "openai", "gemini"] as const).map((p) => (
             <button
               key={p}
               type="button"
@@ -265,7 +265,11 @@ function UploadView({
                   : "border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               }`}
             >
-              {p === "anthropic" ? "Claude" : "GPT (OpenAI)"}
+              {p === "anthropic"
+                ? "Claude"
+                : p === "openai"
+                  ? "GPT (OpenAI)"
+                  : "Gemini"}
             </button>
           ))}
         </div>

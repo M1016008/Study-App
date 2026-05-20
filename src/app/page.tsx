@@ -4,6 +4,7 @@ import { useState, useRef, FormEvent } from "react";
 import type { AiProvider } from "@/lib/ai/types";
 import type {
   DocumentStructure,
+  KeywordEntry,
   StructureNode,
 } from "@/lib/ai/structure";
 import type {
@@ -20,17 +21,28 @@ import { ReviewMode } from "@/components/ReviewMode";
 import { ExamMode } from "@/components/ExamMode";
 import { HistoryMode } from "@/components/HistoryMode";
 import { ProblemSetMode } from "@/components/ProblemSetMode";
+import { ProjectWorkspace } from "@/components/ProjectWorkspace";
 
 type Mode =
   | "explain"
   | "structure"
+  | "projects"
   | "review"
   | "history"
   | "problem-sets";
 type NodeTab = "explain" | "quiz";
 
+const NAV_ITEMS: Array<{ mode: Mode; label: string }> = [
+  { mode: "projects", label: "教材管理" },
+  { mode: "structure", label: "構造化" },
+  { mode: "explain", label: "解説" },
+  { mode: "problem-sets", label: "問題集" },
+  { mode: "review", label: "復習" },
+  { mode: "history", label: "履歴" },
+];
+
 export default function Home() {
-  const [mode, setMode] = useState<Mode>("explain");
+  const [mode, setMode] = useState<Mode>("projects");
   const [provider, setProvider] = useState<AiProvider>("anthropic");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -199,6 +211,11 @@ export default function Home() {
   function nodeContent(node: StructureNode): string {
     const parts = [
       node.summary && `【概要】${node.summary}`,
+      node.learningGoal && `【何を学ぶのか】${node.learningGoal}`,
+      node.importance && `【なぜ重要なのか】${node.importance}`,
+      node.explanation && `【内容の説明】${node.explanation}`,
+      node.extraKnowledge && `【補足知識】${node.extraKnowledge}`,
+      node.keyPoint && `【★ここ大事】${node.keyPoint}`,
       node.excerpt && `【原文抜粋】${node.excerpt}`,
     ].filter(Boolean);
     return parts.join("\n\n");
@@ -213,7 +230,8 @@ export default function Home() {
     setQuizError(null);
 
     if (nodeTab === "explain") {
-      await runNodeExplain(node);
+      nodeAbortRef.current?.abort();
+      setNodeLoading(false);
     }
   }
 
@@ -333,13 +351,9 @@ export default function Home() {
 
   function onChangeNodeTab(tab: NodeTab) {
     setNodeTab(tab);
-    if (
-      tab === "explain" &&
-      selectedNode &&
-      !nodeExplain &&
-      !nodeLoading
-    ) {
-      void runNodeExplain(selectedNode);
+    if (tab === "explain") {
+      nodeAbortRef.current?.abort();
+      setNodeLoading(false);
     }
   }
 
@@ -349,23 +363,20 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-full flex flex-col bg-zinc-50 dark:bg-zinc-950">
-      <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold tracking-tight">
-            AI 学習プラットフォーム
-          </h1>
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1 text-sm bg-zinc-100 dark:bg-zinc-800 rounded-md p-0.5 flex-wrap">
-              {(
-                [
-                  "explain",
-                  "structure",
-                  "problem-sets",
-                  "review",
-                  "history",
-                ] as const
-              ).map((m) => (
+    <div className="min-h-full flex flex-col bg-[var(--app-bg)] text-slate-950">
+      <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/78 shadow-[0_10px_34px_rgba(15,23,42,0.07)] backdrop-blur-2xl">
+        <div className="max-w-7xl mx-auto px-5 lg:px-8 py-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">
+              Personal Study OS
+            </p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-950">
+              AI 学習プラットフォーム
+            </h1>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="inline-grid grid-cols-3 gap-1 rounded-2xl border border-teal-100 bg-white/85 p-1 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_8px_24px_rgba(15,118,110,0.08)] sm:grid-cols-6">
+              {NAV_ITEMS.map(({ mode: m, label }) => (
                 <button
                   key={m}
                   type="button"
@@ -373,28 +384,20 @@ export default function Home() {
                     setMode(m);
                     if (m === "explain" || m === "structure") reset();
                   }}
-                  className={`px-3 py-1 rounded ${
+                  className={`rounded-xl px-3 py-2 font-semibold transition ${
                     mode === m
-                      ? "bg-white dark:bg-zinc-900 shadow-sm font-medium"
-                      : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                      ? "bg-teal-600 text-white shadow-sm shadow-teal-700/20"
+                      : "text-slate-500 hover:bg-white/75 hover:text-teal-900"
                   }`}
                 >
-                  {m === "explain"
-                    ? "解説"
-                    : m === "structure"
-                      ? "構造化"
-                      : m === "problem-sets"
-                        ? "問題集"
-                        : m === "review"
-                          ? "復習"
-                          : "履歴"}
+                  {label}
                 </button>
               ))}
             </div>
             <button
               type="button"
               onClick={() => setLibraryOpen(true)}
-              className="px-3 py-1.5 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              className="rounded-2xl border border-teal-200 bg-white/85 px-4 py-2 text-sm font-semibold text-teal-800 shadow-sm transition hover:border-teal-300 hover:bg-teal-50"
             >
               ライブラリ
             </button>
@@ -403,12 +406,13 @@ export default function Home() {
       </header>
 
       <main
-        className={`flex-1 max-w-6xl w-full mx-auto px-6 py-8 ${
+        className={`flex-1 max-w-7xl w-full mx-auto px-5 lg:px-8 py-8 ${
           mode === "review" ||
           mode === "history" ||
+          mode === "projects" ||
           mode === "problem-sets"
             ? ""
-            : "grid grid-cols-1 lg:grid-cols-2 gap-6"
+            : "grid grid-cols-1 lg:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.35fr)] gap-6"
         }`}
       >
         {mode === "review" && <ReviewMode />}
@@ -418,38 +422,44 @@ export default function Home() {
         {mode === "problem-sets" && (
           <ProblemSetMode provider={provider} setProvider={setProvider} />
         )}
+        {mode === "projects" && <ProjectWorkspace provider={provider} />}
         {mode !== "review" &&
           mode !== "history" &&
+          mode !== "projects" &&
           mode !== "problem-sets" && (
           <>
         <form
           onSubmit={onSubmit}
-          className="flex flex-col gap-4 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5 h-fit"
+          className="flex flex-col gap-5 bg-white/92 rounded-2xl border border-white p-5 h-fit shadow-[0_18px_50px_rgba(15,23,42,0.08)]"
         >
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-2 text-slate-700">
               AI プロバイダー
             </label>
-            <div className="flex gap-2">
-              {(["anthropic", "openai"] as const).map((p) => (
+            <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-100 p-1">
+              {(["anthropic", "openai", "gemini"] as const).map((p) => (
                 <button
                   key={p}
                   type="button"
                   onClick={() => setProvider(p)}
-                  className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
                     provider === p
-                      ? "bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-900 dark:border-white"
-                      : "border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      ? "bg-white text-slate-950 border-white shadow-sm"
+                      : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
                 >
-                  {p === "anthropic" ? "Claude" : "GPT (OpenAI)"}
+                  {p === "anthropic"
+                    ? "Claude"
+                    : p === "openai"
+                      ? "OpenAI"
+                      : "Gemini"}
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-2 text-slate-700">
               教材テキスト
             </label>
             <textarea
@@ -460,19 +470,19 @@ export default function Home() {
                   ? "解説してほしい内容を貼り付けてください"
                   : "ツリー構造を抽出したい教材を貼り付けてください"
               }
-              className="w-full h-40 px-3 py-2 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 focus:outline-none focus:ring-2 focus:ring-zinc-400"
+              className="w-full min-h-64 px-4 py-3 text-sm leading-6 rounded-lg border border-slate-300 bg-white shadow-inner focus:outline-none focus:border-teal-500 focus:ring-4 focus:ring-teal-100 placeholder:text-slate-400"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-sm font-medium mb-2 text-slate-700">
               またはファイル (.pdf / .txt / .md)
             </label>
             <input
               type="file"
               accept=".pdf,.txt,.md,application/pdf,text/plain"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="block w-full text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-zinc-300 file:bg-zinc-50 hover:file:bg-zinc-100 dark:file:border-zinc-700 dark:file:bg-zinc-800"
+              className="block w-full text-sm text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-md file:border-0 file:bg-slate-900 file:text-white file:font-medium hover:file:bg-slate-700"
             />
             {file && (
               <p className="mt-1 text-xs text-zinc-500">
@@ -482,14 +492,14 @@ export default function Home() {
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
           )}
 
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 text-sm font-medium rounded-md bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+              className="flex-1 px-4 py-3 text-sm font-semibold rounded-lg bg-slate-950 text-white hover:bg-slate-800 disabled:opacity-50 shadow-sm"
             >
               {loading
                 ? mode === "explain"
@@ -503,7 +513,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={onStop}
-                className="px-4 py-2 text-sm rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                className="px-4 py-2 text-sm rounded-md border border-slate-300 bg-white hover:bg-slate-50"
               >
                 停止
               </button>
@@ -512,11 +522,11 @@ export default function Home() {
         </form>
 
         {mode === "explain" ? (
-          <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5">
-            <h2 className="text-sm font-medium mb-3 text-zinc-700 dark:text-zinc-300">
+          <section className="bg-white/92 rounded-2xl border border-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+            <h2 className="text-base font-semibold mb-3 text-slate-900">
               AI による解説
             </h2>
-            <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800 dark:text-zinc-200 min-h-[24rem]">
+            <div className="whitespace-pre-wrap text-sm leading-7 text-slate-800 min-h-[28rem]">
               {output ||
                 (loading ? (
                   <span className="text-zinc-400">生成中...</span>
@@ -528,9 +538,9 @@ export default function Home() {
             </div>
           </section>
         ) : (
-          <section className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5">
+          <section className="bg-white/92 rounded-2xl border border-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             {!structure ? (
-              <div className="text-sm text-zinc-400 min-h-[24rem] flex items-center justify-center">
+              <div className="text-sm text-slate-400 min-h-[28rem] flex items-center justify-center text-center">
                 {loading
                   ? "教材を解析中..."
                   : "左に教材を入力して「構造化する」を押してください"}
@@ -549,7 +559,7 @@ export default function Home() {
                       type="button"
                       onClick={saveCurrentToLibrary}
                       disabled={savingLibrary || !structureSource}
-                      className="px-2.5 py-1 text-xs rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
+                      className="px-2.5 py-1 text-xs rounded-md border border-slate-300 bg-white hover:bg-slate-50 disabled:opacity-50"
                     >
                       {savingLibrary
                         ? "保存中..."
@@ -571,6 +581,9 @@ export default function Home() {
                   onSelect={onSelectNode}
                   selectedKey={selectedKey}
                 />
+                {structure.keywords && structure.keywords.length > 0 && (
+                  <KeywordDictionary keywords={structure.keywords} />
+                )}
                 {selectedKey && (
                   <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-3">
                     <div className="flex items-center justify-between gap-2">
@@ -585,8 +598,8 @@ export default function Home() {
                             onClick={() => onChangeNodeTab(t)}
                             className={`px-2.5 py-1 rounded ${
                               nodeTab === t
-                                ? "bg-white dark:bg-zinc-900 shadow-sm font-medium"
-                                : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                                ? "bg-white shadow-sm font-semibold text-slate-950"
+                                : "text-slate-500 hover:text-slate-900 hover:bg-white/60"
                             }`}
                           >
                             {t === "explain" ? "解説" : "問題"}
@@ -596,16 +609,13 @@ export default function Home() {
                     </div>
 
                     {nodeTab === "explain" ? (
-                      <div className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800 dark:text-zinc-200 min-h-[8rem]">
-                        {nodeExplain ||
-                          (nodeLoading ? (
-                            <span className="text-zinc-400">生成中...</span>
-                          ) : (
-                            <span className="text-zinc-400">
-                              ノードをクリックすると解説を生成します
-                            </span>
-                          ))}
-                      </div>
+                      selectedNode ? (
+                        <StructuredNote node={selectedNode} />
+                      ) : (
+                        <div className="text-sm text-zinc-400">
+                          ノードをクリックするとノートを表示します
+                        </div>
+                      )
                     ) : (
                       <div className="space-y-3">
                         <div className="grid grid-cols-3 gap-2">
@@ -665,7 +675,7 @@ export default function Home() {
                         </button>
 
                         {quizError && (
-                          <p className="text-sm text-red-600 dark:text-red-400">
+                          <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                             {quizError}
                           </p>
                         )}
@@ -688,7 +698,7 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="text-center text-xs text-zinc-500 py-4">
+      <footer className="border-t border-slate-200 bg-white/80 text-center text-xs text-slate-500 py-4">
         AI 学習プラットフォーム · Phase 1 MVP
       </footer>
 
@@ -729,6 +739,111 @@ function ControlGroup({
   );
 }
 
+function StructuredNote({ node }: { node: StructureNode }) {
+  const items = [
+    ["何を学ぶのか", node.learningGoal],
+    ["なぜ重要なのか", node.importance],
+    ["内容の説明", node.explanation || node.summary],
+    ["補足知識", node.extraKnowledge],
+    ["★ここ大事", node.keyPoint],
+  ].filter(([, value]) => value);
+
+  return (
+    <div className="space-y-3">
+      {items.map(([label, value]) => (
+        <section
+          key={label}
+          className={
+            label === "★ここ大事"
+              ? "rounded-xl border border-amber-200 bg-amber-50 p-4"
+              : "rounded-xl border border-slate-200 bg-white p-4"
+          }
+        >
+          <p
+            className={
+              label === "★ここ大事"
+                ? "text-xs font-bold text-amber-700"
+                : "text-xs font-bold text-teal-700"
+            }
+          >
+            {label}
+          </p>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-slate-800">
+            {value}
+          </p>
+        </section>
+      ))}
+      {node.excerpt && (
+        <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-xs font-bold text-slate-500">原文抜粋</p>
+          <p className="mt-2 whitespace-pre-wrap text-xs leading-6 text-slate-600">
+            {node.excerpt}
+          </p>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function KeywordDictionary({
+  keywords,
+}: {
+  keywords: KeywordEntry[];
+}) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-teal-700">
+            Keyword Dictionary
+          </p>
+          <h3 className="mt-1 text-sm font-semibold text-slate-900">
+            キーワード集
+          </h3>
+        </div>
+        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-500">
+          {keywords.length}語
+        </span>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        {keywords.map((keyword) => (
+          <article
+            key={keyword.term}
+            className="rounded-lg border border-slate-200 bg-white p-3"
+          >
+            <h4 className="text-sm font-semibold text-slate-950">
+              {keyword.term}
+            </h4>
+            <p className="mt-1 text-sm leading-6 text-slate-700">
+              {keyword.meaning}
+            </p>
+            {(keyword.example || keyword.image) && (
+              <dl className="mt-2 space-y-1 text-xs leading-5 text-slate-500">
+                {keyword.example && (
+                  <div>
+                    <dt className="inline font-semibold text-slate-600">
+                      具体例:
+                    </dt>{" "}
+                    <dd className="inline">{keyword.example}</dd>
+                  </div>
+                )}
+                {keyword.image && (
+                  <div>
+                    <dt className="inline font-semibold text-slate-600">
+                      イメージ:
+                    </dt>{" "}
+                    <dd className="inline">{keyword.image}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function PillButton({
   active,
   onClick,
@@ -742,10 +857,10 @@ function PillButton({
     <button
       type="button"
       onClick={onClick}
-      className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+      className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
         active
-          ? "bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-zinc-900 dark:border-white"
-          : "border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          ? "bg-slate-950 text-white border-slate-950"
+          : "border-slate-300 bg-white hover:bg-slate-50"
       }`}
     >
       {children}

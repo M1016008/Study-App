@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import { generateGeminiText } from "./gemini";
 import type { AiProvider } from "./types";
 
 export interface ProblemAugmentation {
@@ -135,6 +136,11 @@ export async function augmentProblem(
       ],
     });
     const raw = res.choices[0]?.message?.content ?? "";
+    return validate(JSON.parse(extractJson(raw)));
+  }
+
+  if (input.provider === "gemini") {
+    const raw = await generateGeminiText(systemPrompt, userPrompt);
     return validate(JSON.parse(extractJson(raw)));
   }
 

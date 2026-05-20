@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import { generateGeminiText } from "./gemini";
 import type { AiProvider } from "./types";
 
 export type QuestionType = "boolean" | "choice";
@@ -171,6 +172,11 @@ export async function generateQuiz(params: QuizParams): Promise<QuizResult> {
     return validate(JSON.parse(extractJson(raw)), type);
   }
 
+  if (provider === "gemini") {
+    const raw = await generateGeminiText(systemPrompt, userPrompt);
+    return validate(JSON.parse(extractJson(raw)), type);
+  }
+
   const client = new Anthropic();
   const res = await client.messages.create({
     model: "claude-opus-4-7",
@@ -311,6 +317,11 @@ export async function generateExam(params: ExamParams): Promise<QuizResult> {
       ],
     });
     const raw = res.choices[0]?.message?.content ?? "";
+    return validateMixed(JSON.parse(extractJson(raw)), types);
+  }
+
+  if (provider === "gemini") {
+    const raw = await generateGeminiText(systemPrompt, userPrompt);
     return validateMixed(JSON.parse(extractJson(raw)), types);
   }
 
