@@ -29,6 +29,34 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## Personal Deployment
+
+This app stores uploaded study materials, notes, plans, and progress in a
+local SQLite database at:
+
+```text
+data/learn-ai.db
+```
+
+For personal cloud use, deploy to a service that supports a persistent disk or
+volume, then keep the app's `data` directory on that disk.
+
+Recommended settings:
+
+- Build command: `npm install && npm run build`
+- Start command: `npm run start`
+- Required environment variables:
+  - `GEMINI_API_KEY`
+  - `GEMINI_MODEL=gemini-2.0-flash`
+- Persistent disk mount path:
+  - Render: mount to the project `data` directory, for example
+    `/opt/render/project/src/data`
+  - Railway: mount a volume to the app `data` directory used by the service
+
+Vercel is convenient for ordinary Next.js apps, but this app needs persistent
+file storage for SQLite and uploaded learning data. Use Vercel only after
+moving the database and file storage to managed services.
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
