@@ -57,6 +57,13 @@ Vercel is convenient for ordinary Next.js apps, but this app needs persistent
 file storage for SQLite and uploaded learning data. Use Vercel only after
 moving the database and file storage to managed services.
 
+For Google Cloud, start with Compute Engine because it can keep the current
+SQLite database on a persistent disk. See:
+
+```text
+docs/google-cloud-deploy.md
+```
+
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
