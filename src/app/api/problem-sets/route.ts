@@ -16,7 +16,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
-  const provider = (form.get("provider") ?? "anthropic") as AiProvider;
+  const provider = (form.get("provider") ?? "gemini") as AiProvider;
   const title = typeof form.get("title") === "string"
     ? (form.get("title") as string)
     : "";

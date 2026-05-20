@@ -43,7 +43,7 @@ const NAV_ITEMS: Array<{ mode: Mode; label: string }> = [
 
 export default function Home() {
   const [mode, setMode] = useState<Mode>("projects");
-  const [provider, setProvider] = useState<AiProvider>("anthropic");
+  const [provider, setProvider] = useState<AiProvider>("gemini");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
@@ -401,6 +401,29 @@ export default function Home() {
             >
               ライブラリ
             </button>
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 p-1 text-xs shadow-sm">
+              {(["gemini", "openai", "anthropic"] as const).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setProvider(p)}
+                  className={`rounded-xl px-3 py-2 font-semibold transition ${
+                    provider === p
+                      ? "bg-slate-950 text-white"
+                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                  title={
+                    p === "gemini"
+                      ? "標準API"
+                      : p === "openai"
+                        ? "OpenAIを使う"
+                        : "Claudeを使う"
+                  }
+                >
+                  {p === "gemini" ? "Gemini 標準" : p === "openai" ? "OpenAI" : "Claude"}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </header>
@@ -437,7 +460,7 @@ export default function Home() {
               AI プロバイダー
             </label>
             <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-100 p-1">
-              {(["anthropic", "openai", "gemini"] as const).map((p) => (
+              {(["gemini", "openai", "anthropic"] as const).map((p) => (
                 <button
                   key={p}
                   type="button"
@@ -448,14 +471,17 @@ export default function Home() {
                       : "border-transparent text-slate-500 hover:text-slate-900"
                   }`}
                 >
-                  {p === "anthropic"
-                    ? "Claude"
+                  {p === "gemini"
+                    ? "Gemini 標準"
                     : p === "openai"
                       ? "OpenAI"
-                      : "Gemini"}
+                      : "Claude"}
                 </button>
               ))}
             </div>
+            <p className="mt-2 text-xs leading-5 text-slate-500">
+              通常はGeminiを使います。OpenAI / Claudeは必要なときだけ選択できます。
+            </p>
           </div>
 
           <div>

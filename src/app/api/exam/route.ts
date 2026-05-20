@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     );
   }
   const count = Math.floor(countRaw);
-  const provider = (body.provider as AiProvider) ?? "anthropic";
+  const provider = (body.provider as AiProvider) ?? "gemini";
 
   const scope = resolveScope(structure, scopeNodeKey);
   if (scope.nodes.length === 0) {

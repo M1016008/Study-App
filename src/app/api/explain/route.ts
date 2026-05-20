@@ -12,7 +12,7 @@ const MAX_TEXT_CHARS = 80_000;
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
-  const provider = (form.get("provider") ?? "anthropic") as AiProvider;
+  const provider = (form.get("provider") ?? "gemini") as AiProvider;
   const rawText = form.get("text");
   const file = form.get("file");
 

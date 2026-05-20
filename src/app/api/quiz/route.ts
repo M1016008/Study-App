@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     );
   }
   const count = Math.floor(countRaw);
-  const provider = (body.provider as AiProvider) ?? "anthropic";
+  const provider = (body.provider as AiProvider) ?? "gemini";
 
   const materialId =
     typeof body.materialId === "string" && body.materialId.length > 0
