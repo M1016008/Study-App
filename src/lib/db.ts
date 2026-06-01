@@ -197,6 +197,105 @@ const SCHEMA = [
     FOREIGN KEY (project_id) REFERENCES study_projects(id) ON DELETE CASCADE
   )`,
   `CREATE INDEX IF NOT EXISTS idx_study_note_exports_project ON study_note_exports(project_id, created_at DESC)`,
+
+  // --- ONE PIECE CARD GAME eBay 投資スカウトツール (scout_*) ---
+  `CREATE TABLE IF NOT EXISTS scout_runs (
+    id TEXT PRIMARY KEY,
+    seed_query TEXT NOT NULL,
+    source TEXT NOT NULL,
+    discovered_terms_json TEXT,
+    listing_count INTEGER NOT NULL,
+    candidate_count INTEGER NOT NULL,
+    ai_enriched INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_scout_runs_created ON scout_runs(created_at DESC)`,
+
+  `CREATE TABLE IF NOT EXISTS scout_cards (
+    id TEXT PRIMARY KEY,
+    card_name TEXT NOT NULL,
+    card_number TEXT,
+    set_code TEXT,
+    character TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_scout_cards_name ON scout_cards(card_name)`,
+
+  `CREATE TABLE IF NOT EXISTS scout_listings (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    card_id TEXT,
+    ebay_item_id TEXT,
+    title TEXT NOT NULL,
+    price_value REAL,
+    price_currency TEXT,
+    listing_url TEXT,
+    image_url TEXT,
+    condition TEXT,
+    buying_options TEXT,
+    seller TEXT,
+    categories_json TEXT NOT NULL,
+    distribution_type TEXT NOT NULL,
+    is_excluded INTEGER NOT NULL,
+    exclusion_reasons_json TEXT,
+    fetched_at INTEGER NOT NULL,
+    FOREIGN KEY (run_id) REFERENCES scout_runs(id) ON DELETE CASCADE,
+    FOREIGN KEY (card_id) REFERENCES scout_cards(id) ON DELETE SET NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_scout_listings_run ON scout_listings(run_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_scout_listings_card ON scout_listings(card_id)`,
+
+  `CREATE TABLE IF NOT EXISTS scout_psa10_prices (
+    id TEXT PRIMARY KEY,
+    card_id TEXT NOT NULL,
+    price_value REAL NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    pop_count INTEGER,
+    source TEXT NOT NULL,
+    note TEXT,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (card_id) REFERENCES scout_cards(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_scout_psa10_card ON scout_psa10_prices(card_id, created_at DESC)`,
+
+  `CREATE TABLE IF NOT EXISTS scout_sold_records (
+    id TEXT PRIMARY KEY,
+    card_id TEXT,
+    title TEXT NOT NULL,
+    sold_price REAL NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    grade TEXT,
+    sold_at TEXT,
+    source TEXT NOT NULL,
+    raw_row_json TEXT,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (card_id) REFERENCES scout_cards(id) ON DELETE SET NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_scout_sold_card ON scout_sold_records(card_id)`,
+
+  `CREATE TABLE IF NOT EXISTS scout_scores (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    card_id TEXT NOT NULL,
+    representative_listing_id TEXT,
+    current_price REAL,
+    est_raw_price REAL,
+    psa10_price REAL,
+    psa10_multiplier REAL,
+    listing_count INTEGER NOT NULL,
+    breakdown_json TEXT NOT NULL,
+    total_score REAL NOT NULL,
+    grade TEXT NOT NULL,
+    grade_override TEXT,
+    undervalue_reason TEXT,
+    risk TEXT,
+    comment TEXT,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (run_id) REFERENCES scout_runs(id) ON DELETE CASCADE,
+    FOREIGN KEY (card_id) REFERENCES scout_cards(id) ON DELETE CASCADE
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_scout_scores_run_grade ON scout_scores(run_id, grade, total_score DESC)`,
 ];
 
 const MIGRATIONS = [
